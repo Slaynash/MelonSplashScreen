@@ -70,6 +70,17 @@ namespace UnhollowerMini
             return clazz.ptr;
         }
 
+        public static IntPtr GetIl2CppField(IntPtr clazz, string fieldName)
+        {
+            if (clazz == IntPtr.Zero)
+                return IntPtr.Zero;
+
+            var field = il2cpp_class_get_field_from_name(clazz, fieldName);
+            if (field == IntPtr.Zero)
+                MelonLogger.Error($"Field {fieldName} was not found on class {Marshal.PtrToStringAnsi(il2cpp_class_get_name(clazz))}");
+            return field;
+        }
+
         internal static IntPtr GetIl2CppMethod(IntPtr clazz, string name, string returntype, params string[] parameters)
         {
             IntPtr iter = IntPtr.Zero;
@@ -112,6 +123,26 @@ namespace UnhollowerMini
             return obj?.Pointer ?? throw new NullReferenceException();
         }
 
+        public static IntPtr ManagedStringToIl2Cpp(string str)
+        {
+            if (str == null) return IntPtr.Zero;
+
+            fixed (char* chars = str)
+                return il2cpp_string_new_utf16(chars, str.Length);
+        }
+
+        public static T ResolveICall<T>(string signature) where T : Delegate
+        {
+
+            var icallPtr = il2cpp_resolve_icall(signature);
+            if (icallPtr == IntPtr.Zero)
+            {
+                MelonLogger.Error($"ICall {signature} not resolved");
+                return null;
+            }
+
+            return Marshal.GetDelegateForFunctionPointer<T>(icallPtr);
+        }
 
 
         // IL2CPP Functions

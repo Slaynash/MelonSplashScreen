@@ -14,7 +14,9 @@ namespace UnhollowerMini
             }
         }
 
-        private readonly uint myGcHandle;
+        protected uint myGcHandle;
+
+        protected Il2CppObjectBase() { }
 
         public Il2CppObjectBase(IntPtr pointer)
         {
@@ -23,6 +25,7 @@ namespace UnhollowerMini
 
             myGcHandle = IL2CPP.il2cpp_gchandle_new(pointer, false);
         }
+
 
         ~Il2CppObjectBase()
         {

@@ -13,5 +13,15 @@ namespace Windows
 
         [DllImport("user32.dll")]
         public static extern IntPtr DispatchMessage([In] ref Msg lpmsg);
+
+        [DllImport("user32.dll", SetLastError = false)]
+        public static extern IntPtr GetMessageExtraInfo();
+
+        [DllImport("user32.dll", ExactSpelling = true)]
+        public static extern IntPtr SetTimer(IntPtr hWnd, IntPtr nIDEvent, uint uElapse, TimerProc lpTimerFunc);
+        public delegate void TimerProc(IntPtr hWnd, uint uMsg, IntPtr nIDEvent, uint dwTime);
+
+        [DllImport("user32.dll", ExactSpelling = true)]
+        public static extern bool KillTimer(IntPtr hWnd, IntPtr uIDEvent);
     }
 }

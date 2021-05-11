@@ -29,9 +29,8 @@ namespace UnityEngine
         {
             get
             {
-                IntPtr* param = null;
                 IntPtr returnedException = IntPtr.Zero;
-                IntPtr intPtr = IL2CPP.il2cpp_runtime_invoke(m_get_whiteTexture, IntPtr.Zero, (void**)param, ref returnedException);
+                IntPtr intPtr = IL2CPP.il2cpp_runtime_invoke(m_get_whiteTexture, IntPtr.Zero, (void**)0, ref returnedException);
                 Il2CppException.RaiseExceptionIfNecessary(returnedException);
                 return intPtr == IntPtr.Zero ? null : new Texture2D(intPtr);
             }
@@ -49,15 +48,11 @@ namespace UnityEngine
 
         public unsafe void SetPixels(Color[] colors, int miplevel = 0)
         {
-            IntPtr colorsPtr = IL2CPP.il2cpp_array_new(Il2CppClassPointerStore<Color>.NativeClassPtr, (uint)colors.Length);
+            IntPtr colorsArrayPtr = IL2CPP.il2cpp_array_new(Il2CppClassPointerStore<Color>.NativeClassPtr, (uint)colors.Length);
             for (var i = 0; i < colors.Length; i++)
-            {
-                IntPtr arrayStartPointer = IntPtr.Add(colorsPtr, 4 * IntPtr.Size);
-                ((Color*)arrayStartPointer.ToPointer())[i] = colors[i];
-            }
-
+                ((Color*)(colorsArrayPtr + 4 * IntPtr.Size))[i] = colors[i];
             void** args = stackalloc void*[2];
-            args[0] = (void*)colorsPtr;
+            args[0] = (void*)colorsArrayPtr;
             args[1] = &miplevel;
             IntPtr returnedException = default;
             IL2CPP.il2cpp_runtime_invoke(m_SetPixels, IL2CPP.Il2CppObjectBaseToPtrNotNull(this), args, ref returnedException);

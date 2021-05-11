@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading;
+using UnhollowerMini;
 using UnityEngine;
 using Windows;
 
@@ -44,16 +45,17 @@ namespace MelonSplashScreen
         private static PresentFrame m_PresentFrame;
 #pragma warning restore 0649
 
-        private static Texture2D backgroundTexture;
-        private static Texture2D melonloaderLogoTexture;
-        private static Texture2D loadingbarOuterTexture;
-        private static Texture2D loadingbarInnerTexture;
-
+        private Texture2D backgroundTexture;
+        private Texture2D melonloaderLogoTexture;
+        private Texture2D loadingbarOuterTexture;
+        private Texture2D loadingbarInnerTexture;
+        private Font font;
+        private Mesh melonloaderversionTextmesh;
+        private Mesh progressTextmesh;
 
         private bool generationDone = false;
-        private static float progress = 0f;
-
-
+        private float progress = 0f;
+        private string progressText = "", progressTextCached;
 
         public override void OnApplicationEarlyStart()
         {
@@ -61,14 +63,39 @@ namespace MelonSplashScreen
                 return;
 
             InitTextures();
+            // Load default font
+            IntPtr fontPtr = Resources.GetBuiltinResource(Il2CppType.Of<Font>(), "Arial.ttf");
+            font = fontPtr != IntPtr.Zero ? new Font(fontPtr) : null;
+
+            TextGenerationSettings settings = new TextGenerationSettings();
+            settings.textAnchor = TextAnchor.MiddleCenter;
+            settings.color = new Color(1, 1, 1);
+            settings.generationExtents = new Vector2(540, 47.5f);
+            settings.richText = true;
+            settings.font = font;
+            settings.pivot = new Vector2(0.5f, 0.5f);
+            settings.fontSize = 24;
+            settings.fontStyle = FontStyle.Bold;
+            settings.verticalOverflow = VerticalWrapMode.Overflow;
+            settings.scaleFactor = 1f;
+            settings.lineSpacing = 1f;
+            melonloaderversionTextmesh = TextMeshGenerator.Generate("<color=#78f764>Melon</color><color=#ff3c6a>Loader</color> " + BuildInfo.Version + " Alpha Pre-Release", settings);
+
+            RefreshProgressTextmesh();
+
             RegisterMessageCallbacks();
+
 
             Render();
 
             StartUnhollowerThread();
             MainLoop();
 
+            progress = 100f;
+            progressText = "Starting game...";
+
             Render(); // Final render, to set the progress bar to 100%
+            Render(); // Double buffering
 
             // TODO Patch ML Unhollower part
         }
@@ -95,31 +122,32 @@ namespace MelonSplashScreen
 
         private void RegisterMessageCallbacks()
         {
-            MelonLogger.MsgCallbackHandler += (meloncolor, txtcolor, namesection, msg_) =>
+            Action<ConsoleColor, ConsoleColor, string, string> loghander = (meloncolor, txtcolor, namesection, msg_) =>
             {
                 if (namesection == "EarlyGraphicsInit")
                     return;
 
-                progress = ProgressParser.GetProgress(msg_, progress);
+                progress = ProgressParser.GetProgress(msg_, ref progressText, progress);
             };
 
-            MelonDebug.MsgCallbackHandler += (meloncolor, txtcolor, namesection, msg_) =>
-            {
-                if (namesection == "EarlyGraphicsInit")
-                    return;
-
-                progress = ProgressParser.GetProgress(msg_, progress);
-            };
+            MelonLogger.MsgCallbackHandler += loghander;
+            MelonDebug.MsgCallbackHandler += loghander;
         }
 
 
         private void StartUnhollowerThread()
         {
-            MelonLogger.Msg("Starting Assembly Generator");
-            typeof(MelonHandler).Assembly.GetType("MelonLoader.Il2CppAssemblyGenerator").GetMethod("Run", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
-            MelonLogger.Msg("Done running Assembly Generator");
-            progress = 100f;
-            generationDone = true;
+            new Thread(() =>
+            {
+                MelonLogger.Msg("Starting Assembly Generator");
+                typeof(MelonHandler).Assembly.GetType("MelonLoader.Il2CppAssemblyGenerator").GetMethod("Run", BindingFlags.NonPublic | BindingFlags.Static).Invoke(null, null);
+                MelonLogger.Msg("Done running Assembly Generator");
+                generationDone = true;
+            })
+            {
+                IsBackground = true,
+                Name = "UnhollowerThread"
+            }.Start();
         }
 
         private void MainLoop()
@@ -127,20 +155,27 @@ namespace MelonSplashScreen
             User32.PeekMessage(out Msg msg, IntPtr.Zero, 0, 0, 0);
             while (!generationDone) // WM_QUIT
             {
-                if (msg.message == (uint)WindowMessage.QUIT)
+                if (msg.message == WindowMessage.QUIT)
                 {
                     Process.GetCurrentProcess().Kill();
                     return;
                 }
                 else if (!User32.PeekMessage(out msg, IntPtr.Zero, 0, 0, 1)) // If there is no pending message
                 {
+                    // TODO kill our timer
                     Render();
 
                     Thread.Sleep(16); // ~60fps
                 }
+                else if (msg.message == WindowMessage.NCLBUTTONDOWN || msg.message == (WindowMessage)0x242 /* NCPOINTERDOWN */)
+                {
+                    // TODO Pass event, without calling the default SetTimer
+                    // TODO call out own SetTimer instead
+                    // This currently makes the window unresizable
+                }
                 else
                 {
-                    if (msg.message == (uint)WindowMessage.PAINT)
+                    if (msg.message == WindowMessage.PAINT)
                         Render();
 
                     User32.TranslateMessage(ref msg);
@@ -150,11 +185,34 @@ namespace MelonSplashScreen
         }
 
 
+        private void RefreshProgressTextmesh()
+        {
+            if (progressTextCached == progressText)
+                return;
 
+            progressTextCached = progressText;
+
+            TextGenerationSettings settings2 = new TextGenerationSettings();
+            settings2.textAnchor = TextAnchor.MiddleCenter;
+            settings2.color = new Color(1, 1, 1);
+            settings2.generationExtents = new Vector2(540, 47.5f);
+            settings2.richText = true;
+            settings2.font = font;
+            settings2.pivot = new Vector2(0.5f, 0.5f);
+            settings2.fontSize = 16;
+            settings2.fontStyle = FontStyle.Bold;
+            settings2.verticalOverflow = VerticalWrapMode.Overflow;
+            settings2.scaleFactor = 1f;
+            settings2.lineSpacing = 1f;
+            progressTextmesh = TextMeshGenerator.Generate(progressText, settings2);
+        }
 
         private unsafe void Render()
         {
+            RefreshProgressTextmesh();
+
             m_SetupPixelCorrectCoordinates(false);
+            
 
             int sw = Screen.width;
             int sh = Screen.height;
@@ -164,6 +222,10 @@ namespace MelonSplashScreen
 
             Graphics.DrawTexture(new Rect(0, 0, sw, sh), backgroundTexture);
             Graphics.DrawTexture(new Rect((sw - logoWidth) / 2, sh - ((sh - logoHeight) / 2 - 46), logoWidth, -logoHeight), melonloaderLogoTexture);
+
+            font.material.SetPass(0);
+            Graphics.DrawMeshNow(melonloaderversionTextmesh, new Vector3(sw / 2, sh - (sh / 2 + (logoHeight / 2) - 35), 0), Quaternion.identity);
+
             RenderProgressBar((sw - 540) / 2, sh - ((sh - 36) / 2 + (logoHeight / 2) + 50), 540, 36, progress);
 
             m_PresentFrame();
@@ -174,6 +236,9 @@ namespace MelonSplashScreen
             Graphics.DrawTexture(new Rect(x, y, width, height), loadingbarOuterTexture);
             Graphics.DrawTexture(new Rect(x + 6, y + 6, width - 12, height - 12), backgroundTexture);
             Graphics.DrawTexture(new Rect(x + 9, y + 9, (int)((width - 18) * Math.Min(1.0f, progress)), height - 18), loadingbarInnerTexture);
+
+            font.material.SetPass(0);
+            Graphics.DrawMeshNow(progressTextmesh, new Vector3(x + width / 2, y + height / 2 + 2, 0), Quaternion.identity);
         }
     }
 }
