@@ -1,8 +1,10 @@
 ﻿using MelonLoader;
 using MelonSplashScreen.NativeUtils;
+using MelonSplashScreen.NativeUtils.PEParser;
 using System;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading;
 using UnhollowerMini;
 using UnityEngine;
@@ -19,6 +21,7 @@ namespace MelonSplashScreen
     {
         private delegate void SetupPixelCorrectCoordinates(bool _1);
         private delegate void PresentFrame();
+        private delegate IntPtr User32SetTimerDelegate(IntPtr hWnd, IntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
 
         private const float logoRatio = 1.2353f;
 
@@ -53,14 +56,21 @@ namespace MelonSplashScreen
         private Mesh melonloaderversionTextmesh;
         private Mesh progressTextmesh;
 
+        private IntPtr titleBarTimer;
+
         private bool generationDone = false;
         private float progress = 0f;
         private string progressText = "", progressTextCached;
+
+        private static User32SetTimerDelegate user32SetTimerOriginal;
+        private static bool nextSetTimerIsUnity = false;
 
         public override void OnApplicationEarlyStart()
         {
             if (!NativeSignatureResolver.Apply())
                 return;
+
+            ApplyUser32SetTimerPatch();
 
             InitTextures();
             // Load default font
@@ -100,6 +110,53 @@ namespace MelonSplashScreen
             // TODO Patch ML Unhollower part
         }
 
+        private unsafe void ApplyUser32SetTimerPatch()
+        {
+            IntPtr moduleAddress = IntPtr.Zero;
+
+            foreach (ProcessModule module in Process.GetCurrentProcess().Modules)
+            {
+                if (module.ModuleName == "USER32.dll")
+                {
+                    moduleAddress = module.BaseAddress;
+                    break;
+                }
+            }
+
+            if (moduleAddress == IntPtr.Zero)
+            {
+                MelonLogger.Error($"Failed to find module \"USER32.dll\"");
+                return;
+            }
+
+            IntPtr original = PEUtils.GetExportedFunctionPointerForModule(moduleAddress, "SetTimer");
+
+
+            IntPtr detourPtr = typeof(MelonSplashScreenPlugin).GetMethod("User32SetTimerDetour", BindingFlags.NonPublic | BindingFlags.Static).MethodHandle.GetFunctionPointer();
+
+            if (detourPtr == IntPtr.Zero)
+            {
+                MelonLogger.Error("Failed to find USER32.dll::SetTimer");
+                return;
+            }
+
+            MelonLogger.Msg("SetTimer: 0x" + string.Format("{0:X}", (ulong)original));
+
+            MelonUtils.NativeHookAttach((IntPtr)(&original), detourPtr);
+            user32SetTimerOriginal = Marshal.GetDelegateForFunctionPointer<User32SetTimerDelegate>(original);
+            MelonLogger.Msg("Applied USER32.dll::SetTimer patch");
+        }
+
+        private static IntPtr User32SetTimerDetour(IntPtr hWnd, IntPtr nIDEvent, uint uElapse, IntPtr timerProc)
+        {
+            if (nextSetTimerIsUnity)
+            {
+                nextSetTimerIsUnity = false;
+                return IntPtr.Zero;
+            }
+
+            return user32SetTimerOriginal(hWnd, nIDEvent, uElapse, timerProc);
+        }
 
         private void InitTextures()
         {
@@ -162,26 +219,41 @@ namespace MelonSplashScreen
                 }
                 else if (!User32.PeekMessage(out msg, IntPtr.Zero, 0, 0, 1)) // If there is no pending message
                 {
-                    // TODO kill our timer
+                    if (titleBarTimer != IntPtr.Zero)
+                    {
+                        User32.KillTimer(IntPtr.Zero, titleBarTimer);
+                        titleBarTimer = IntPtr.Zero;
+                    }
                     Render();
 
                     Thread.Sleep(16); // ~60fps
                 }
-                else if (msg.message == WindowMessage.NCLBUTTONDOWN || msg.message == (WindowMessage)0x242 /* NCPOINTERDOWN */)
-                {
-                    // TODO Pass event, without calling the default SetTimer
-                    // TODO call out own SetTimer instead
-                    // This currently makes the window unresizable
-                }
                 else
                 {
-                    if (msg.message == WindowMessage.PAINT)
+                    if (msg.message == WindowMessage.NCLBUTTONDOWN || msg.message == (WindowMessage)0x242 /* NCPOINTERDOWN */)
+                    {
+                        if (titleBarTimer == IntPtr.Zero)
+                            titleBarTimer = User32.SetTimer(IntPtr.Zero, IntPtr.Zero, 10, TitleBarTimerUpdateCallback);
+                        nextSetTimerIsUnity = true;
+                    }
+                    else if (msg.message == WindowMessage.PAINT)
                         Render();
 
                     User32.TranslateMessage(ref msg);
                     User32.DispatchMessage(ref msg);
                 }
             }
+
+            if (titleBarTimer != IntPtr.Zero)
+            {
+                User32.KillTimer(IntPtr.Zero, titleBarTimer);
+                titleBarTimer = IntPtr.Zero;
+            }
+        }
+
+        private void TitleBarTimerUpdateCallback(IntPtr hWnd, uint uMsg, IntPtr nIDEvent, uint dwTime)
+        {
+            //Render(); // XXX Somehow this throws NPE, so we can't use it :///
         }
 
 

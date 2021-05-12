@@ -56,6 +56,16 @@
     <Compile Include="NativeUtils\NativeSignatureAttribute.cs" />
     <Compile Include="NativeUtils\NativeSignatureFlags.cs" />
     <Compile Include="NativeUtils\NativeSignatureResolver.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageDataDescriptor.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageExportDirectory.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageFileHeader.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageSectionHeader.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageNtHeaders.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageThunkData32.cs" />
+    <Compile Include="NativeUtils\PEParser\ImageThunkData64.cs" />
+    <Compile Include="NativeUtils\PEParser\OptionalFileHeader32.cs" />
+    <Compile Include="NativeUtils\PEParser\OptionalFileHeader64.cs" />
+    <Compile Include="NativeUtils\PEParser\PEUtils.cs" />
     <Compile Include="ProgressParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TextMeshGenerator.cs" />
