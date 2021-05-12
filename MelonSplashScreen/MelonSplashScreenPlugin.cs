@@ -253,7 +253,7 @@ namespace MelonSplashScreen
 
         private void TitleBarTimerUpdateCallback(IntPtr hWnd, uint uMsg, IntPtr nIDEvent, uint dwTime)
         {
-            //Render(); // XXX Somehow this throws NPE, so we can't use it :///
+            Render();
         }
 
 
@@ -281,26 +281,33 @@ namespace MelonSplashScreen
 
         private unsafe void Render()
         {
-            RefreshProgressTextmesh();
+            try
+            {
+                RefreshProgressTextmesh();
 
-            m_SetupPixelCorrectCoordinates(false);
-            
+                m_SetupPixelCorrectCoordinates(false);
 
-            int sw = Screen.width;
-            int sh = Screen.height;
 
-            int logoHeight = (int)(sh * 0.4f);
-            int logoWidth = (int)(logoHeight * logoRatio);
+                int sw = Screen.width;
+                int sh = Screen.height;
 
-            Graphics.DrawTexture(new Rect(0, 0, sw, sh), backgroundTexture);
-            Graphics.DrawTexture(new Rect((sw - logoWidth) / 2, sh - ((sh - logoHeight) / 2 - 46), logoWidth, -logoHeight), melonloaderLogoTexture);
+                int logoHeight = (int)(sh * 0.4f);
+                int logoWidth = (int)(logoHeight * logoRatio);
 
-            font.material.SetPass(0);
-            Graphics.DrawMeshNow(melonloaderversionTextmesh, new Vector3(sw / 2, sh - (sh / 2 + (logoHeight / 2) - 35), 0), Quaternion.identity);
+                Graphics.DrawTexture(new Rect(0, 0, sw, sh), backgroundTexture);
+                Graphics.DrawTexture(new Rect((sw - logoWidth) / 2, sh - ((sh - logoHeight) / 2 - 46), logoWidth, -logoHeight), melonloaderLogoTexture);
 
-            RenderProgressBar((sw - 540) / 2, sh - ((sh - 36) / 2 + (logoHeight / 2) + 50), 540, 36, progress);
+                font.material.SetPass(0);
+                Graphics.DrawMeshNow(melonloaderversionTextmesh, new Vector3(sw / 2, sh - (sh / 2 + (logoHeight / 2) - 35), 0), Quaternion.identity);
 
-            m_PresentFrame();
+                RenderProgressBar((sw - 540) / 2, sh - ((sh - 36) / 2 + (logoHeight / 2) + 50), 540, 36, progress);
+
+                m_PresentFrame();
+            }
+            catch (Exception e)
+            {
+                MelonLogger.Error("Exception while rendering: " + e);
+            }
         }
 
         private void RenderProgressBar(int x, int y, int width, int height, float progress)
