@@ -146,9 +146,6 @@ namespace MelonSplashScreen
 
         private static bool AssemblyGeneratorRunPrefix(ref int __result)
         {
-            __result = 1;
-            return false;
-
             if (!agRan)
             {
                 agRan = true;
