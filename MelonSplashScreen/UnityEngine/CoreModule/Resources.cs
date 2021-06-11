@@ -42,5 +42,11 @@ namespace UnityEngine
             Il2CppException.RaiseExceptionIfNecessary(returnedException);
             return objectPointer;
         }
+
+        public static T GetBuiltinResource<T>(string path) where T : Il2CppObjectBase
+        {
+            IntPtr ptr = GetBuiltinResource(Il2CppType.Of<T>(), path);
+            return ptr != IntPtr.Zero ? (T)typeof(T).GetConstructor(new[] { typeof(IntPtr) }).Invoke(new object[] { ptr }) : null;
+        }
     }
 }

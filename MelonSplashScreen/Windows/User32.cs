@@ -23,5 +23,8 @@ namespace Windows
 
         [DllImport("user32.dll", ExactSpelling = true)]
         public static extern bool KillTimer(IntPtr hWnd, IntPtr uIDEvent);
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SetClipboardData(uint uFormat, ref DropFile hMem);
     }
 }

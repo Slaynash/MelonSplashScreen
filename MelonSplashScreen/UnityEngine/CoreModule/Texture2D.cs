@@ -3,11 +3,13 @@ using UnhollowerMini;
 
 namespace UnityEngine
 {
-    internal class Texture2D : Il2CppObjectBase
+    internal class Texture2D : Texture
     {
+        private delegate void SetPixelsImplDelegate(IntPtr @this, int x, int y, int w, int h, IntPtr pixel, int miplevel, int frame);
+
         private static readonly IntPtr m_get_whiteTexture;
         private static readonly IntPtr m_ctor;
-        private static readonly IntPtr m_SetPixels;
+        private static readonly SetPixelsImplDelegate m_SetPixelsImpl;
         private static readonly IntPtr m_Apply;
 
         static Texture2D()
@@ -19,7 +21,7 @@ namespace UnityEngine
 
             m_get_whiteTexture = IL2CPP.GetIl2CppMethod(Il2CppClassPointerStore<Texture2D>.NativeClassPtr, "get_whiteTexture", "UnityEngine.Texture2D");
 
-            m_SetPixels = IL2CPP.GetIl2CppMethod(Il2CppClassPointerStore<Texture2D>.NativeClassPtr, "SetPixels", "System.Void", "UnityEngine.Color[]", "System.Int32");
+            m_SetPixelsImpl = IL2CPP.ResolveICall<SetPixelsImplDelegate>("UnityEngine.Texture2D::SetPixelsImpl");
             m_Apply = IL2CPP.GetIl2CppMethod(Il2CppClassPointerStore<Texture2D>.NativeClassPtr, "Apply", "System.Void");
         }
 
@@ -46,17 +48,26 @@ namespace UnityEngine
             Il2CppException.RaiseExceptionIfNecessary(returnedException);
         }
 
-        public unsafe void SetPixels(Color[] colors, int miplevel = 0)
+        public unsafe void SetPixels(Color[] colors)
         {
-            IntPtr colorsArrayPtr = IL2CPP.il2cpp_array_new(Il2CppClassPointerStore<Color>.NativeClassPtr, (uint)colors.Length);
-            for (var i = 0; i < colors.Length; i++)
-                ((Color*)(colorsArrayPtr + 4 * IntPtr.Size))[i] = colors[i];
-            void** args = stackalloc void*[2];
-            args[0] = (void*)colorsArrayPtr;
-            args[1] = &miplevel;
-            IntPtr returnedException = default;
-            IL2CPP.il2cpp_runtime_invoke(m_SetPixels, IL2CPP.Il2CppObjectBaseToPtrNotNull(this), args, ref returnedException);
-            Il2CppException.RaiseExceptionIfNecessary(returnedException);
+            SetPixels(0, 0, width, height, colors, 0);
+        }
+
+        public unsafe void SetPixels(int x, int y, int blockWidth, int blockHeight, Color[] colors, int miplevel = 0)
+        {
+            SetPixelsImpl(x, y, blockWidth, blockHeight, colors, miplevel, 0);
+        }
+
+        public unsafe void SetPixelsImpl(int x, int y, int w, int h, Color[] pixel, int miplevel, int frame)
+        {
+            IntPtr pixelArrayPtr = IL2CPP.il2cpp_array_new(Il2CppClassPointerStore<Color>.NativeClassPtr, (uint)pixel.Length);
+            for (var i = 0; i < pixel.Length; i++)
+            {
+                IntPtr arrayStartPointer = IntPtr.Add(pixelArrayPtr, 4 * IntPtr.Size);
+                ((Color*)arrayStartPointer.ToPointer())[i] = pixel[i];
+            }
+
+            m_SetPixelsImpl(IL2CPP.Il2CppObjectBaseToPtrNotNull(this), x, y, w, h, pixelArrayPtr, miplevel, frame);
         }
 
         public unsafe void Apply()

@@ -26,6 +26,9 @@ namespace UnhollowerMini
             myGcHandle = IL2CPP.il2cpp_gchandle_new(pointer, false);
         }
 
+        public bool WasCollected =>
+            IL2CPP.il2cpp_gchandle_get_target(myGcHandle) == IntPtr.Zero;
+
 
         ~Il2CppObjectBase()
         {

@@ -185,7 +185,7 @@ namespace UnityEngine
             set
             {
                 IL2CPP.Il2CppObjectBaseToPtrNotNull(this);
-                IntPtr valueArrayPtr = IL2CPP.il2cpp_array_new(Il2CppClassPointerStore<Color32>.NativeClassPtr, (ulong)value.Length);
+                IntPtr valueArrayPtr = IL2CPP.il2cpp_array_new(Il2CppClassPointerStore<Color>.NativeClassPtr, (ulong)value.Length);
                 for (var i = 0; i < value.Length; i++)
                     ((Color*)(valueArrayPtr + 4 * IntPtr.Size))[i] = value[i];
                 void** ptr = stackalloc void*[1];
