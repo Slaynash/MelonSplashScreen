@@ -1,6 +1,8 @@
 # MelonSplashScreen
 
 ## About
+> This is now part of MelonLoader starting 0.4.4.
+
 This plugin requires MelonLoader >=0.4, and is only here for testing purposes.
 
 ## Supported Unity versions
